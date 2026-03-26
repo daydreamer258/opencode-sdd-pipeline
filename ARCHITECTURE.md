@@ -1,338 +1,337 @@
-# Architecture
+# 架构说明
 
-This document describes the internal architecture of the OpenCode SDD Pipeline.
+本文档描述 OpenCode SDD Pipeline 的内部架构。
 
 ---
 
-## System Overview
+## 系统架构总览
 
 ```mermaid
 graph TB
-    User((User))
-    Orch[Orchestrator<br/>Primary Agent]
+    User((用户))
+    Orch[Orchestrator<br/>主 Agent]
 
-    subgraph SubAgents[SubAgents — no direct user interaction]
-        Triage[Triage Agent<br/>Requirements Intake]
-        Spec[Spec Writer Agent<br/>Specification]
-        Planner[Planner Agent<br/>Technical Design]
-        TaskD[Task Decomposer Agent<br/>Task Breakdown]
-        Impl[Implementer Agent<br/>Code Implementation]
-        Rev[Reviewer Agent<br/>Code Review]
-        Valid[Validator Agent<br/>Validation]
+    subgraph SubAgents[SubAgents — 不可与用户直接交互]
+        Triage[Triage Agent<br/>需求采集]
+        Spec[Spec Writer Agent<br/>规格定义]
+        Planner[Planner Agent<br/>技术方案]
+        TaskD[Task Decomposer Agent<br/>任务拆解]
+        Impl[Implementer Agent<br/>代码实施]
+        Rev[Reviewer Agent<br/>代码审查]
+        Valid[Validator Agent<br/>验证核验]
     end
 
-    subgraph Skills[Skills — explicit invocation]
-        SDDSkill[sdd-workflow<br/>Main Entry Point]
-        FeatInit[feature-init<br/>Directory Init]
-        RiskA[risk-assess<br/>Risk Assessment]
-        StageG[stage-gate<br/>Stage Check]
-        SpecC[spec-check<br/>Spec Quality Audit]
-        DiffR[diff-review<br/>Change Consistency Audit]
+    subgraph Skills[Skills — 显式调用]
+        SDDSkill[sdd-workflow<br/>主流程入口]
+        FeatInit[feature-init<br/>目录初始化]
+        RiskA[risk-assess<br/>风险评估]
+        StageG[stage-gate<br/>阶段检查]
+        SpecC[spec-check<br/>Spec 质量审查]
+        DiffR[diff-review<br/>变更一致性审查]
     end
 
-    User <-->|Conversation| Orch
-    Orch -->|Invoke| Triage
-    Orch -->|Invoke| Spec
-    Orch -->|Invoke| Planner
-    Orch -->|Invoke| TaskD
-    Orch -->|Invoke| Impl
-    Orch -->|Invoke| Rev
-    Orch -->|Invoke| Valid
-    Orch -.->|Explicit call| FeatInit
-    Orch -.->|Explicit call| RiskA
-    Orch -.->|Explicit call| StageG
-    Orch -.->|Explicit call| SpecC
-    Rev -.->|Explicit call| DiffR
+    User <-->|对话交互| Orch
+    Orch -->|调用| Triage
+    Orch -->|调用| Spec
+    Orch -->|调用| Planner
+    Orch -->|调用| TaskD
+    Orch -->|调用| Impl
+    Orch -->|调用| Rev
+    Orch -->|调用| Valid
+    Orch -.->|显式调用| FeatInit
+    Orch -.->|显式调用| RiskA
+    Orch -.->|显式调用| StageG
+    Orch -.->|显式调用| SpecC
+    Rev -.->|显式调用| DiffR
 
-    Triage -->|Return artifact + questions| Orch
-    Spec -->|Return artifact + questions| Orch
-    Planner -->|Return artifact + questions| Orch
-    TaskD -->|Return artifact + questions| Orch
-    Impl -->|Return results| Orch
-    Rev -->|Return review verdict| Orch
-    Valid -->|Return validation verdict| Orch
+    Triage -->|返回 artifact + 疑问| Orch
+    Spec -->|返回 artifact + 疑问| Orch
+    Planner -->|返回 artifact + 疑问| Orch
+    TaskD -->|返回 artifact + 疑问| Orch
+    Impl -->|返回执行结果| Orch
+    Rev -->|返回审查结论| Orch
+    Valid -->|返回验证结论| Orch
 ```
 
 ---
 
-## Complete Workflow
+## 完整工作流程
 
 ```mermaid
 flowchart TD
-    Start([User submits requirement]) --> Init[/feature-init Skill/]
-    Init --> Intake[Intake Phase<br/>Triage Agent iterative loop]
-    Intake --> IntakeDone{User finalized?}
-    IntakeDone -->|No, has feedback| Intake
-    IntakeDone -->|Yes| SG1[/stage-gate Skill/]
-    SG1 --> Route{Size Routing}
+    Start([用户提出需求]) --> Init[/feature-init Skill/]
+    Init --> Intake[Intake 阶段<br/>Triage Agent 迭代循环]
+    Intake --> IntakeDone{用户定稿?}
+    IntakeDone -->|否, 有修改意见| Intake
+    IntakeDone -->|是| SG1[/stage-gate Skill/]
+    SG1 --> Route{规模路由}
 
     Route -->|small| SG4[/stage-gate Skill/]
-    Route -->|medium / large| SpecPhase[Spec Phase<br/>Spec Writer Agent iterative loop]
+    Route -->|medium / large| SpecPhase[Spec 阶段<br/>Spec Writer Agent 迭代循环]
 
     SpecPhase --> SC[/spec-check Skill/]
-    SC --> SpecDone{User finalized?}
-    SpecDone -->|No| SpecPhase
-    SpecDone -->|Yes| SG2[/stage-gate Skill/]
-    SG2 --> PlanPhase[Plan Phase<br/>Planner Agent iterative loop]
+    SC --> SpecDone{用户定稿?}
+    SpecDone -->|否| SpecPhase
+    SpecDone -->|是| SG2[/stage-gate Skill/]
+    SG2 --> PlanPhase[Plan 阶段<br/>Planner Agent 迭代循环]
 
-    PlanPhase --> PlanDone{User finalized?}
-    PlanDone -->|No| PlanPhase
-    PlanDone -->|Yes| SG3[/stage-gate Skill/]
-    SG3 --> TaskPhase[Tasks Phase<br/>Task Decomposer Agent iterative loop]
+    PlanPhase --> PlanDone{用户定稿?}
+    PlanDone -->|否| PlanPhase
+    PlanDone -->|是| SG3[/stage-gate Skill/]
+    SG3 --> TaskPhase[Tasks 阶段<br/>Task Decomposer Agent 迭代循环]
 
-    TaskPhase --> TaskDone{User finalized?}
-    TaskDone -->|No| TaskPhase
-    TaskDone -->|Yes| SG4
+    TaskPhase --> TaskDone{用户定稿?}
+    TaskDone -->|否| TaskPhase
+    TaskDone -->|是| SG4
 
     SG4[/stage-gate Skill/] --> Checkpoint[/risk-assess Skill/]
-    Checkpoint --> RiskLevel{Risk Level}
+    Checkpoint --> RiskLevel{风险等级}
     RiskLevel -->|Low| ImplPhase
-    RiskLevel -->|Medium| UserConfirm{User confirms<br/>checkpoint?}
-    RiskLevel -->|High| ForceReview[Force stop<br/>User reviews plan + tasks]
-    UserConfirm -->|Confirmed| ImplPhase
-    ForceReview -->|Approved| ImplPhase
+    RiskLevel -->|Medium| UserConfirm{用户确认<br/>checkpoint?}
+    RiskLevel -->|High| ForceReview[强制停止<br/>用户 review plan + tasks]
+    UserConfirm -->|确认| ImplPhase
+    ForceReview -->|放行| ImplPhase
 
-    ImplPhase[Implement Phase<br/>Implementer Agent] --> ReviewPhase[Review Phase<br/>Reviewer Agent<br/>calls diff-review Skill]
-    ReviewPhase --> ReviewResult{Review Verdict}
-    ReviewResult -->|Pass| ValidPhase
-    ReviewResult -->|Needs changes| ImplPhase
+    ImplPhase[Implement 阶段<br/>Implementer Agent 执行] --> ReviewPhase[Review 阶段<br/>Reviewer Agent 审查<br/>内部调用 diff-review Skill]
+    ReviewPhase --> ReviewResult{审查结论}
+    ReviewResult -->|通过| ValidPhase
+    ReviewResult -->|需要修改| ImplPhase
 
-    ValidPhase[Validate Phase<br/>Validator Agent] --> ValidResult{Validation Verdict}
-    ValidResult -->|Pass| IsLarge{Is large task?}
-    ValidResult -->|Conditional pass| IsLarge
-    ValidResult -->|Fail| ImplPhase
+    ValidPhase[Validate 阶段<br/>Validator Agent 验证] --> ValidResult{验证结论}
+    ValidResult -->|通过| IsLarge{是 large 任务?}
+    ValidResult -->|有条件通过| IsLarge
+    ValidResult -->|不通过| ImplPhase
 
-    IsLarge -->|Yes| Report[Generate 06-report.md]
-    IsLarge -->|No| Done([Workflow Complete])
+    IsLarge -->|是| Report[生成 06-report.md]
+    IsLarge -->|否| Done([Workflow 完成])
     Report --> Done
 ```
 
 ---
 
-## Iterative Loop Pattern
+## 迭代循环模式（核心交互模型）
 
-The Intake, Spec, Plan, and Tasks phases all follow the same **iterative loop** pattern. The SubAgent writes/updates an artifact and returns clarification questions on each invocation. The Orchestrator relays between the SubAgent and the user until both sides have no remaining questions.
+Intake、Spec、Plan、Tasks 四个阶段都使用相同的**迭代循环**模式。SubAgent 每次调用都会写入/更新 artifact 并返回待澄清问题，Orchestrator 负责在 SubAgent 和用户之间来回传递，直到双方都没有问题为止。
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant O as Orchestrator<br/>(Primary Agent)
-    participant S as SubAgent<br/>(e.g. Triage)
+    participant U as 用户
+    participant O as Orchestrator<br/>(主 Agent)
+    participant S as SubAgent<br/>(如 Triage)
 
-    Note over O: Phase begins
-    O->>S: First call: pass requirements/context
-    S->>S: Explore code + write artifact
-    S-->>O: Return: artifact summary + clarification questions
+    Note over O: 阶段开始
+    O->>S: 首次调用：传入需求/上下文
+    S->>S: 探索代码 + 写入 artifact
+    S-->>O: 返回: artifact 摘要 + 待澄清问题
 
-    O->>U: Present artifact summary + questions
-    U-->>O: Answers + modification requests
+    O->>U: 展示 artifact 摘要 + 待澄清问题
+    U-->>O: 回答问题 + 提出修改意见
 
-    loop Iterate until finalized
-        O->>S: Iteration call: pass user answers + modifications
-        S->>S: Update artifact
-        S-->>O: Return: update summary + new questions (if any)
-        O->>U: Present updated artifact + new questions (if any)
-        U-->>O: Answers / modifications / approve
+    loop 迭代直到定稿
+        O->>S: 迭代调用：传入用户回答 + 修改意见
+        S->>S: 更新 artifact
+        S-->>O: 返回: 更新摘要 + 新的待澄清问题(如有)
+        O->>U: 展示更新后的 artifact + 新问题(如有)
+        U-->>O: 回答 / 修改意见 / 确认通过
     end
 
-    Note over O: User approves → call stage-gate skill → next phase
+    Note over O: 用户确认定稿 → 调用 stage-gate skill → 进入下一阶段
 ```
 
-**Finalization condition**: The SubAgent has no more questions **AND** the user explicitly confirms. The loop continues as long as either party has questions or change requests.
+**定稿条件**：SubAgent 没有更多疑问 **且** 用户明确表示没有问题。只要任一方仍有疑问或修改意见，循环就继续。
 
 ---
 
-## SubAgent Step-Limit Continuation
+## SubAgent 超步数续接机制
 
-When a SubAgent exits due to exceeding its max step count, the Orchestrator **must not take over** — it launches a new SubAgent of the same type to continue.
+当 SubAgent 因超出最大步数（steps 上限）退出时，Orchestrator **不可自己接手执行**，必须启动新的同类型 SubAgent 续接。
 
 ```mermaid
 sequenceDiagram
     participant O as Orchestrator
     participant S1 as SubAgent #1
-    participant S2 as SubAgent #2 (continuation)
+    participant S2 as SubAgent #2 (续接)
 
-    O->>S1: Call: pass task
-    S1->>S1: Execute task...
-    Note over S1: Reached step limit
-    S1->>S1: Update implementation-log with progress
-    S1-->>O: Exit: return completed + remaining tasks
+    O->>S1: 调用：传入任务
+    S1->>S1: 执行任务...
+    Note over S1: 达到步数上限
+    S1->>S1: 更新 implementation-log 记录进度
+    S1-->>O: 退出：返回已完成任务 + 未完成任务
 
-    O->>O: Read progress, prepare continuation params
-    O->>S2: Continuation call: pass remaining tasks + current progress
-    S2->>S2: Continue from remaining tasks
-    S2-->>O: Return: completion summary
+    O->>O: 读取进度，准备续接参数
+    O->>S2: 续接调用：传入未完成任务 + 当前进度
+    S2->>S2: 从未完成任务继续执行
+    S2-->>O: 返回：完成摘要
 ```
 
 ---
 
-## Execution-Type SubAgent Interaction
+## 执行型 SubAgent 交互模型
 
-Implementer, Reviewer, and Validator are **execution-type** SubAgents — they don't follow the iterative loop; they execute and return results in one pass.
+Implementer、Reviewer、Validator 是**执行型** SubAgent，不走迭代循环，而是执行完毕后一次性返回结果。
 
 ```mermaid
 sequenceDiagram
-    participant U as User
+    participant U as 用户
     participant O as Orchestrator
     participant I as Implementer Agent
     participant R as Reviewer Agent
     participant V as Validator Agent
 
-    Note over O: Implement Phase
-    O->>I: Call: pass feature directory + tasks
-    I->>I: Execute tasks sequentially
-    I->>I: Continuously update 04-implementation-log.md
-    I-->>O: Return: completion summary
+    Note over O: Implement 阶段
+    O->>I: 调用：传入 feature 目录 + tasks
+    I->>I: 逐个执行 tasks 中的代码改动
+    I->>I: 持续更新 04-implementation-log.md
+    I-->>O: 返回: 完成摘要
 
-    Note over O: Review Phase
-    O->>R: Call: pass feature directory
-    R->>R: Audit code changes against spec/plan
-    R->>R: Call diff-review skill
-    R-->>O: Return: review verdict + issue list
-    O->>U: Present review results
+    Note over O: Review 阶段
+    O->>R: 调用：传入 feature 目录
+    R->>R: 对照 spec/plan 审查代码变更
+    R->>R: 调用 diff-review skill
+    R-->>O: 返回: 审查结论 + 问题列表
+    O->>U: 展示审查结果
 
-    alt Review passed
-        Note over O: Enter Validate Phase
-    else Review failed
-        O->>U: Present issues
-        Note over O: Return to Implement for fixes
+    alt 审查通过
+        Note over O: 进入 Validate 阶段
+    else 审查不通过
+        O->>U: 展示问题
+        Note over O: 回到 Implement 修复
     end
 
-    Note over O: Validate Phase
-    O->>V: Call: pass feature directory
-    V->>V: Verify each AC + run tests
-    V->>V: Write 05-validation.md
-    V-->>O: Return: pass/fail verdict
-    O->>U: Present validation results
+    Note over O: Validate 阶段
+    O->>V: 调用：传入 feature 目录
+    V->>V: 逐条核验 AC + 运行测试
+    V->>V: 写入 05-validation.md
+    V-->>O: 返回: pass/fail 结论
+    O->>U: 展示验证结果
 ```
 
 ---
 
-## SubAgent Reference
+## SubAgent 一览
 
-| Agent | Type | Responsibility | Output | Steps |
-|-------|------|---------------|--------|-------|
-| **Triage** | Iterative | Requirements intake, size assessment | `00-intake.md` | 50 |
-| **Spec Writer** | Iterative | Functional specification | `01-spec.md` | 50 |
-| **Planner** | Iterative | Technical design | `02-plan.md` | 50 |
-| **Task Decomposer** | Iterative | Task breakdown (INVEST) | `03-tasks.md` | 50 |
-| **Implementer** | Execution | Code implementation | `04-implementation-log.md` + code | 200 |
-| **Reviewer** | Execution | Code review (calls `diff-review`) | Review verdict | 50 |
-| **Validator** | Execution | AC verification + tests | `05-validation.md` | 50 |
-
----
-
-## Skill Reference
-
-| Skill | Caller | When | Condition | User-invokable |
-|-------|--------|------|-----------|:-:|
-| **sdd-workflow** | User | Start SDD workflow | User types `/sdd-workflow` | Yes |
-| **feature-init** | Orchestrator / User | Workflow start | None | Yes |
-| **stage-gate** | Orchestrator | Before each phase transition | Required at every transition | No |
-| **spec-check** | Orchestrator | After Spec Agent output | Size >= medium | No |
-| **risk-assess** | Orchestrator | Before Implement phase | After `stage-gate` passes | No |
-| **diff-review** | Reviewer Agent | During Review phase | After Implement completes | No |
+| Agent | 类型 | 职责 | 产出 | Steps |
+|-------|------|------|------|-------|
+| **Triage** | 迭代型 | 需求采集、规模判定 | `00-intake.md` | 50 |
+| **Spec Writer** | 迭代型 | 功能规格定义 | `01-spec.md` | 50 |
+| **Planner** | 迭代型 | 技术方案设计 | `02-plan.md` | 50 |
+| **Task Decomposer** | 迭代型 | 任务拆解（INVEST 原则） | `03-tasks.md` | 50 |
+| **Implementer** | 执行型 | 代码实施 | `04-implementation-log.md` + 代码变更 | 200 |
+| **Reviewer** | 执行型 | 代码审查（调用 `diff-review`） | 审查结论 | 50 |
+| **Validator** | 执行型 | 验收标准核验 + 测试 | `05-validation.md` | 50 |
 
 ---
 
-## Size Routing
+## Skill 一览
 
-The Triage Agent assesses task size during Intake, which determines the subsequent path. Users can override the agent's assessment.
+| Skill | 调用者 | 调用时机 | 调用条件 | 用户可触发 |
+|-------|--------|---------|---------|:---:|
+| **sdd-workflow** | 用户 | 启动 SDD 流程 | 用户输入 `/sdd-workflow` | 是 |
+| **feature-init** | Orchestrator / 用户 | Workflow 启动初期 | 无 | 是 |
+| **stage-gate** | Orchestrator | 每次阶段切换前 | 每次切换必须调用 | 否 |
+| **spec-check** | Orchestrator | Spec Agent 产出后 | 规模 >= medium | 否 |
+| **risk-assess** | Orchestrator | 进入 Implement 前 | `stage-gate` 通过后 | 否 |
+| **diff-review** | Reviewer Agent | Review 阶段审查过程中 | Implement 完成后 | 否 |
+
+---
+
+## 规模路由
+
+Triage Agent 在 Intake 阶段评估任务规模，决定后续走哪条路径。用户可以覆盖 Agent 的判断。
 
 ```mermaid
 flowchart LR
-    Intake[Intake Finalized] --> Size{Size Assessment}
-    Size -->|"small<br/>bug fix / single file / config"| PathS["intake → implement<br/>→ review → validate"]
-    Size -->|"medium<br/>new feature / multi-file"| PathM["intake → spec → plan → tasks<br/>→ implement → review → validate"]
-    Size -->|"large<br/>architecture change / cross-module"| PathL["Full path + forced checkpoint<br/>+ manual review + report"]
+    Intake[Intake 定稿] --> Size{规模判定}
+    Size -->|"small<br/>bug fix / 单文件 / 配置"| PathS["intake → implement<br/>→ review → validate"]
+    Size -->|"medium<br/>新功能 / 多文件"| PathM["intake → spec → plan → tasks<br/>→ implement → review → validate"]
+    Size -->|"large<br/>架构变更 / 跨模块"| PathL["完整路径 + 强制 checkpoint<br/>+ 人工 review + report"]
 ```
 
 ---
 
-## Stage Gate Mechanism
+## Stage Gate 机制
 
-Before each phase transition, the Orchestrator explicitly calls the `stage-gate` Skill to verify preconditions. Transitions are blocked if any condition is unmet.
+每个阶段切换前，Orchestrator 显式调用 `stage-gate` Skill 检查前置条件。不满足条件不允许进入下一阶段。
 
-| From | To | Preconditions |
-|------|----|--------------|
-| Intake | Spec | `00-intake.md` finalized, size >= medium |
-| Intake | Implement | `00-intake.md` finalized, size = small |
-| Spec | Plan | `01-spec.md` finalized |
-| Plan | Tasks | `02-plan.md` finalized |
-| Tasks | Implement | `03-tasks.md` finalized + checkpoint passed |
-| Implement | Review | `04-implementation-log.md` exists |
-| Review | Validate | Reviewer approved or user confirmed |
-| Validate (fail) | Implement | Re-enter for fixes |
-| Validate (pass) | Report | Large tasks only |
+| 从 | 到 | 前置条件 |
+|----|-----|---------|
+| Intake | Spec | `00-intake.md` 用户已定稿，规模 >= medium |
+| Intake | Implement | `00-intake.md` 用户已定稿，规模 = small |
+| Spec | Plan | `01-spec.md` 用户已定稿 |
+| Plan | Tasks | `02-plan.md` 用户已定稿 |
+| Tasks | Implement | `03-tasks.md` 用户已定稿 + checkpoint 通过 |
+| Implement | Review | `04-implementation-log.md` 已生成 |
+| Review | Validate | Reviewer 审查通过或用户确认 |
+| Validate (fail) | Implement | 重新进入修复 |
+| Validate (pass) | Report | 仅 large 任务 |
 
 ---
 
-## Risk Assessment Checkpoint
+## 风险评估 Checkpoint
 
-Before entering the Implement phase, the Orchestrator calls the `risk-assess` Skill.
+进入 Implement 前，Orchestrator 显式调用 `risk-assess` Skill 评估风险。
 
 ```mermaid
 flowchart TD
-    Tasks[Tasks Finalized] --> SG[/stage-gate Skill/]
+    Tasks[Tasks 定稿] --> SG[/stage-gate Skill/]
     SG --> RA[/risk-assess Skill/]
 
-    RA --> Low{Low Risk}
-    RA --> Med{Medium Risk}
-    RA --> High{High Risk}
+    RA --> Low{Low 风险}
+    RA --> Med{Medium 风险}
+    RA --> High{High 风险}
 
-    Low -->|Auto-continue| Impl[Enter Implement]
-    Med -->|Generate checkpoint summary| UserMed[User confirms to continue]
-    High -->|Force stop| UserHigh[User reviews plan + tasks<br/>manual approval]
+    Low -->|自动继续| Impl[进入 Implement]
+    Med -->|生成 checkpoint 摘要| UserMed[用户确认后继续]
+    High -->|强制停止| UserHigh[用户 review plan + tasks<br/>手动放行]
 
     UserMed --> Impl
     UserHigh --> Impl
 ```
 
-**Assessment dimensions**: number of changed files, core module impact, data mutations, external dependencies, irreversible operations.
+**评估维度**：变更文件数量、核心模块影响、数据变更、外部依赖、不可逆操作。
 
 ---
 
-## Key Constraints
+## 关键约束
 
-- SubAgents **cannot** interact with the user directly — all communication goes through the Orchestrator
-- The Orchestrator **cannot** modify SubAgent-generated artifacts directly — it must pass modifications back to the SubAgent
-- The Orchestrator **cannot** execute SubAgent work itself — when a SubAgent exceeds its step limit, a new SubAgent of the same type must be launched
-- All Skills are invoked **explicitly** within the workflow
+- SubAgent **不能**与用户直接交互——所有用户沟通由 Orchestrator 代理
+- Orchestrator **不可**直接修改 SubAgent 生成的 artifact——必须将修改意见传给 SubAgent 执行
+- Orchestrator **不可**自己执行 SubAgent 的工作——SubAgent 超步数退出时必须启动新的同类型 SubAgent 续接
+- 所有 Skill 在流程中**显式调用**
 
 ---
 
-## Directory Layout
+## 目录结构
 
 ```
 .opencode/
-├── agents/                         # Agent definitions
-│   ├── orchestrator.md             # Primary Agent
-│   ├── triage.md                   # Requirements intake SubAgent
-│   ├── spec-writer.md              # Specification SubAgent
-│   ├── planner.md                  # Technical design SubAgent
-│   ├── task-decomposer.md          # Task breakdown SubAgent
-│   ├── implementer.md              # Implementation SubAgent (steps: 200)
-│   ├── reviewer.md                 # Code review SubAgent
-│   └── validator.md                # Validation SubAgent
-├── skills/                         # Skill definitions
-│   ├── sdd-workflow/SKILL.md       # Main entry point (user-invokable)
-│   ├── feature-init/SKILL.md       # Directory init (user-invokable)
-│   ├── risk-assess/SKILL.md        # Risk assessment (Orchestrator)
-│   ├── stage-gate/SKILL.md         # Stage check (Orchestrator)
-│   ├── spec-check/SKILL.md         # Spec quality audit (Orchestrator)
-│   └── diff-review/SKILL.md        # Change consistency audit (Reviewer)
-├── templates/                      # Artifact templates (00–06)
-├── docs/                           # Research & proposal docs
-├── AGENTS.md                       # Project-level contract
-└── README.md
+├── agents/                         # Agent 定义
+│   ├── orchestrator.md             # 主 Agent
+│   ├── triage.md                   # 需求采集 SubAgent
+│   ├── spec-writer.md              # 规格定义 SubAgent
+│   ├── planner.md                  # 技术方案 SubAgent
+│   ├── task-decomposer.md          # 任务拆解 SubAgent
+│   ├── implementer.md              # 代码实施 SubAgent (steps: 200)
+│   ├── reviewer.md                 # 代码审查 SubAgent
+│   └── validator.md                # 验证核验 SubAgent
+├── skills/                         # Skill 定义
+│   ├── sdd-workflow/SKILL.md       # 主流程入口（用户可触发）
+│   ├── feature-init/SKILL.md       # 目录初始化（用户可触发）
+│   ├── risk-assess/SKILL.md        # 风险评估（Orchestrator 调用）
+│   ├── stage-gate/SKILL.md         # 阶段检查（Orchestrator 调用）
+│   ├── spec-check/SKILL.md         # Spec 质量审查（Orchestrator 调用）
+│   └── diff-review/SKILL.md        # 变更一致性审查（Reviewer 调用）
+├── templates/                      # Artifact 模板（00-06）
+├── AGENTS.md                       # 项目级 Contract
+└── docs/                           # 研究与提案文档
 
 features/
-└── {id}-{name}/                    # Per-feature artifact directory
+└── {id}-{name}/                    # 每个 feature 的产物目录
     ├── 00-intake.md
     ├── 01-spec.md
     ├── 02-plan.md
     ├── 03-tasks.md
     ├── 04-implementation-log.md
     ├── 05-validation.md
-    └── 06-report.md                # Optional
+    └── 06-report.md                # 可选
 ```

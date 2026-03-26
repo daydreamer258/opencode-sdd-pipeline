@@ -1,96 +1,97 @@
 # OpenCode SDD Pipeline
 
-A **Spec-Driven Development (SDD)** agentic workflow for [OpenCode](https://opencode.ai).
+基于 **SDD（Spec-Driven Development）** 方法论的 Agentic 开发工作流，运行在 [OpenCode](https://opencode.ai) 上。
 
-> Spec is the hub. Artifacts are the source of truth. Process is the constraint.
+> 规范是中枢，产物是事实，流程是约束。
 
-The pipeline orchestrates 7 specialized AI agents through a stage-gated workflow — from requirements intake to code validation — ensuring every feature is spec-anchored, artifact-driven, and implementation-bounded.
+本项目编排了 7 个专业化 AI Agent，通过阶段门控工作流协作完成从需求采集到代码验证的全流程——确保每个 feature 都以 Spec 为锚点、以 Artifact 为驱动、以 Task 为实施边界。
 
 ---
 
-## Features
+## 特性
 
-- **Stage-gated workflow** — phases progress in order; each transition is guarded by automated precondition checks
-- **Multi-agent collaboration** — 7 SubAgents (Triage, Spec Writer, Planner, Task Decomposer, Implementer, Reviewer, Validator) coordinated by an Orchestrator
-- **Iterative refinement** — requirement, spec, plan, and task phases loop with user feedback until explicitly finalized
-- **Risk-aware execution** — automated risk assessment before implementation; medium/high risk requires human approval
-- **Size-based routing** — small tasks skip spec/plan/task phases; large tasks enforce checkpoints and reports
-- **Artifact-first** — every phase produces a versioned markdown artifact, never relying on session memory
+- **阶段门控工作流** — 各阶段按序推进，每次切换前自动检查前置条件
+- **多 Agent 协作** — 7 个 SubAgent（Triage、Spec Writer、Planner、Task Decomposer、Implementer、Reviewer、Validator）由 Orchestrator 统一调度
+- **迭代式精炼** — 需求、规格、方案、任务阶段均与用户反复迭代，直到明确定稿
+- **风险感知执行** — 实施前自动评估风险等级，中/高风险需用户人工确认
+- **规模路由** — 小任务跳过 spec/plan/tasks 阶段，大任务强制 checkpoint 和报告
+- **Artifact 优先** — 每个阶段产出版本化的 Markdown 文件，不依赖会话记忆
 
-## Quick Start
+## 快速开始
 
-1. Copy the `agents/`, `skills/`, and `templates/` directories into your project's `.opencode/` folder:
+1. 将本仓库的 `agents/`、`skills/`、`templates/` 目录和 `AGENTS.md` 文件复制到你项目的 `.opencode/` 文件夹下：
 
 ```
 your-project/
 └── .opencode/
     ├── agents/
     ├── skills/
-    └── templates/
+    ├── templates/
+    └── AGENTS.md
 ```
 
-2. Launch OpenCode:
+2. 启动 OpenCode：
 
 ```bash
 opencode
 ```
 
-3. Start the SDD workflow:
+3. 开始 SDD 工作流：
 
 ```
-/sdd-workflow Implement a user search feature with keyword matching and result sorting
+/sdd-workflow 实现一个用户搜索功能，支持关键词匹配和结果排序
 ```
 
-Or initialize a feature directory manually:
+或手动初始化 feature 目录：
 
 ```
 /feature-init 001 user-search
 ```
 
-That's it. The Orchestrator agent will guide you through each phase.
+就这样，Orchestrator Agent 会引导你走完每个阶段。
 
 ---
 
-## How It Works
+## 工作原理
 
 ```
 intake → spec → plan → tasks → implement → review → validate → (report)
 ```
 
-| Size | Path |
+| 规模 | 路径 |
 |------|------|
 | **small** | intake → implement → review → validate |
 | **medium** | intake → spec → plan → tasks → implement → review → validate |
-| **large** | full path + forced checkpoint + manual review + report |
+| **large** | 完整路径 + 强制 checkpoint + 人工 review + report |
 
-Each iterative phase (intake, spec, plan, tasks) follows a loop: the SubAgent writes an artifact and raises questions, the Orchestrator relays to the user, and the cycle repeats until finalized. Execution phases (implement, review, validate) run to completion and return results.
+迭代型阶段（intake、spec、plan、tasks）遵循循环模式：SubAgent 写入/更新 artifact 并提出待澄清问题，Orchestrator 在 SubAgent 与用户之间来回传递，直到双方都没有问题。执行型阶段（implement、review、validate）一次性执行完毕并返回结果。
 
-For the full architecture, workflow diagrams, and detailed agent/skill reference, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+完整的架构图、工作流程图和 Agent/Skill 详细说明请参见 **[ARCHITECTURE.md](ARCHITECTURE.md)**。
 
 ---
 
-## Project Structure
+## 项目结构
 
 ```
-agents/                        # Agent definitions (copy to .opencode/)
-├── orchestrator.md            # Primary Agent — orchestrates the workflow
-├── triage.md                  # Requirements intake & size routing
-├── spec-writer.md             # Functional specification authoring
-├── planner.md                 # Technical design & trade-offs
-├── task-decomposer.md         # Task breakdown (INVEST principles)
-├── implementer.md             # Code implementation (200 steps)
-├── reviewer.md                # Code review against spec/plan
-└── validator.md               # Acceptance criteria verification
+agents/                        # Agent 定义（复制到 .opencode/）
+├── orchestrator.md            # 主 Agent — 工作流调度
+├── triage.md                  # 需求采集与规模路由
+├── spec-writer.md             # 功能规格定义
+├── planner.md                 # 技术方案与取舍
+├── task-decomposer.md         # 任务拆解（INVEST 原则）
+├── implementer.md             # 代码实施（200 steps）
+├── reviewer.md                # 代码审查（对照 spec/plan）
+└── validator.md               # 验收标准核验
 
-skills/                        # Skill definitions (copy to .opencode/)
-├── sdd-workflow/SKILL.md      # Main entry point
-├── feature-init/SKILL.md      # Feature directory scaffolding
-├── stage-gate/SKILL.md        # Phase transition guard
-├── spec-check/SKILL.md        # Spec quality audit
-├── risk-assess/SKILL.md       # Pre-implementation risk assessment
-└── diff-review/SKILL.md       # Change-spec consistency audit
+skills/                        # Skill 定义（复制到 .opencode/）
+├── sdd-workflow/SKILL.md      # 主流程入口
+├── feature-init/SKILL.md      # Feature 目录脚手架
+├── stage-gate/SKILL.md        # 阶段切换门控
+├── spec-check/SKILL.md        # Spec 质量审查
+├── risk-assess/SKILL.md       # 实施前风险评估
+└── diff-review/SKILL.md       # 变更-规格一致性审查
 
-templates/                     # Artifact templates (copy to .opencode/)
+templates/                     # Artifact 模板（复制到 .opencode/）
 ├── 00-intake.md
 ├── 01-spec.md
 ├── 02-plan.md
@@ -98,35 +99,37 @@ templates/                     # Artifact templates (copy to .opencode/)
 ├── 04-implementation-log.md
 ├── 05-validation.md
 └── 06-report.md
+
+AGENTS.md                      # 项目级 Contract（复制到 .opencode/）
 ```
 
-At runtime, each feature produces its artifacts under `features/{id}-{name}/`.
+运行时，每个 feature 的产物生成在 `features/{id}-{name}/` 目录下。
 
 ---
 
-## Core Principles
+## 核心原则
 
-1. **Artifact-first** — all phase outputs are written to files; nothing depends on session memory
-2. **Stage-gated** — phases advance in order; `stage-gate` skill checks preconditions at every transition
-3. **User-finalized** — every artifact requires explicit user approval before the next phase begins
-4. **Orchestrator-mediated** — SubAgents never interact with the user directly
-5. **Implementation-bounded** — code changes are constrained to the task list; no scope creep
-6. **Review + Validate** — dual-layer quality assurance before completion
-
----
-
-## Requirements
-
-- [OpenCode](https://opencode.ai) installed and configured
+1. **Artifact 优先** — 所有阶段产出必须落到文件，不依赖会话记忆
+2. **阶段门控** — 各阶段按序推进，`stage-gate` skill 在每次切换前检查前置条件
+3. **用户定稿制** — 每个 artifact 必须用户明确确认后才能进入下一阶段
+4. **Orchestrator 代理** — SubAgent 不直接与用户交互，所有沟通通过 Orchestrator 中转
+5. **实施有界** — 代码变更受 task 列表约束，不超范围
+6. **Review + Validate 双重把关** — Reviewer 审查设计一致性，Validator 核验验收标准
 
 ---
 
-## Contributing
+## 环境要求
 
-Contributions are welcome! Feel free to open issues or submit pull requests.
+- 已安装并配置 [OpenCode](https://opencode.ai)
 
 ---
 
-## License
+## 贡献
+
+欢迎提 Issue 或 Pull Request！
+
+---
+
+## 许可证
 
 MIT
